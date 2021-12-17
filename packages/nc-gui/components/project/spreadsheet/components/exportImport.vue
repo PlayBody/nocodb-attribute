@@ -59,7 +59,7 @@
         
          <v-list-item
           dense
-          @click="downloadPdf"
+          @click="exportToPdf"
         >
           <v-list-item-title>
             <v-icon small class="mr-1">
@@ -238,6 +238,7 @@ export default {
             null,
             true
           ])
+           console.log(res)
           const data = res.data
           offset = +res.headers['nc-export-offset']
           const blob = new Blob([data], { type: 'text/plain;charset=utf-8' })
@@ -252,11 +253,11 @@ export default {
         this.$toast.error(e.message).goAway(3000)
       }
     },
-    async downloadPdf(){
-      const doc = new jsPDF()
-      let offset = 0
-      let c = 1
-       const res = await this.$store.dispatch('sqlMgr/ActSqlOp', [
+    async exportToPdf(){
+      this.loading = true
+      let data
+     
+         const res = await this.$store.dispatch('sqlMgr/ActSqlOp', [
             this.publicViewId
               ? null
               : {
@@ -283,29 +284,25 @@ export default {
             null,
             true
           ])
-          console.log(res)
+      console.log(res)
       const data = res.data
-      console.log(data)    
-      const blob = new Blob([data], { type: 'text/plain;charset=utf-8' })
-      console.log(blob)
-      doc.text("Details", 20, 10)
-
-      doc.autoTable({
-        body: blob.parse(data)
-      })
-      doc.save("table.pdf")
+        const url = window.URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', 'proto.pdf') // or any other extension
+        document.body.appendChild(link)
+        link.click()
+        this.$toast.success('Successfully exported metadata').goAway(3000)
+      
+      this.loading = false
     },
-     async exportPdf() {
-      // const fields = this.availableColumns.map(c => c._cn)
-      // const blob = new Blob([Papaparse.unparse(await this.extractCsvData())], { type: 'text/plain;charset=utf-8' })
+    async downloadPdf(){
 
+      const doc = new jsPDF()
       let offset = 0
       let c = 1
-
-     try {
-       while (!isNaN(offset) && offset > -1) {
-          const res = await this.$store.dispatch('sqlMgr/ActSqlOp', [
-          this.publicViewId
+      const res = await this.$store.dispatch('sqlMgr/ActSqlOp', [
+            this.publicViewId
               ? null
               : {
                   dbAlias: this.nodes.dbAlias,
@@ -331,20 +328,21 @@ export default {
             null,
             true
           ])
-          const data = res.data.st
-          offset = +res.headers['nc-export-offset']
-          const blob = new Blob([data], { type: 'application/pdf;charset=utf-8' })
-          FileSaver.saveAs(blob, `${this.meta._tn}_exported_${c++}.pdf`)
-          if (offset > -1) {
-            this.$toast.info('Downloading more files').goAway(3000)
-          } else {
-            this.$toast.success('Successfully exported all table data').goAway(3000)
-          }
-        }
-      } catch (e) {
-        this.$toast.error(e.message).goAway(3000)
-      }
+      console.log(res)
+      const data = res.data
+      console.log(data)    
+      const blob = new Blob([data], { type: 'application/pdf;charset-UTF-8'})
+      console.log(blob)
+      
+      const resData = JSON.parse(JSON.stringify(data))
+      console.log("Response Parse")
+      console.log(resData)
+      doc.text(blob)
+      doc.save("table.pdf")
+
+
     },
+ 
     async importData(columnMappings) {
       try {
         const api = this.$ncApis.get({
